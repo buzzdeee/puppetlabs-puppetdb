@@ -102,16 +102,19 @@ class puppetdb::params inherits puppetdb::globals {
         $etcdir              = '/etc/puppetlabs/puppetdb'
         $puppet_confdir      = pick($settings::confdir,'/etc/puppetlabs/puppet')
         $puppet_service_name = 'puppetserver'
+        $vardir              = '/opt/puppetlabs/server/data/puppetdb'
       }
       'OpenBSD': {
         $etcdir              = '/etc/puppetlabs/puppetdb'
         $puppet_confdir      = pick($settings::confdir,'/etc/puppetlabs/puppet')
         $puppet_service_name = undef
+        $vardir              = '/var/db/puppetlabs/server/data/puppetdb'
       }
       'FreeBSD': {
         $etcdir              = '/usr/local/etc/puppetlabs/puppetdb'
         $puppet_confdir      = pick($settings::confdir,'/usr/local/etc/puppetlabs/puppet')
         $puppet_service_name = undef
+        $vardir              = '/opt/puppetlabs/server/data/puppetdb'
       }
       default: {
         fail("The fact 'osfamily' is set to ${::osfamily} which is not supported by the puppetdb module.")
@@ -119,7 +122,6 @@ class puppetdb::params inherits puppetdb::globals {
     }
     $terminus_package       = 'puppetdb-termini'
     $test_url               = '/pdb/meta/v1/version'
-    $vardir                 = '/opt/puppetlabs/server/data/puppetdb'
     $database_embedded_path = "${vardir}/db/db"
   }
 
