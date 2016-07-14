@@ -60,7 +60,7 @@ class puppetdb::master::config (
   }
 
   package { $terminus_package:
-    ensure => $puppetdb::params::puppetdb_version,
+    ensure => 'installed',
   }
 
   if ($strict_validation) {
