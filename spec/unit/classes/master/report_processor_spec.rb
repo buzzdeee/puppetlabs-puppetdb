@@ -1,44 +1,56 @@
 require 'spec_helper'
 
-describe 'puppetdb::master::report_processor', :type => :class do
-  context 'on a supported platform' do
-    let(:facts) do
-      {
-          :osfamily                 => 'RedHat',
-          :clientcert               => 'test.domain.local',
-      }
-    end
+describe 'puppetdb::master::report_processor', type: :class do
+  around(:each) do |example|
+    confdir = RSpec.configuration.confdir
+    RSpec.configuration.confdir = '/etc/puppet'
+    example.run
+    RSpec.configuration.confdir = confdir
+  end
 
-    it { should contain_class('puppetdb::master::report_processor') }
+  on_supported_os.each do |os, facts|
+    context "on #{os}" do
+      let(:facts) do
+        facts.merge(puppetversion: Puppet.version,
+                    service_provider: 'systemd',
+                    clientcert: 'test.domain.local')
+      end
 
-    describe 'when using default values' do
-      it { should contain_ini_subsetting('puppet.conf/reports/puppetdb').
-        with(
-        'ensure'                => 'absent',
-        'path'                  => '/etc/puppet/puppet.conf',
-        'section'               => 'master',
-        'setting'               => 'reports',
-        'subsetting'            => 'puppetdb',
-        'subsetting_separator'  => ','
-        )}
-    end
+      it { is_expected.to contain_class('puppetdb::master::report_processor') }
 
-    describe 'when enabling reports' do
-      let(:params) do
-        {
-            'enable' => true
+      describe 'when using default values' do
+        it {
+          is_expected.to contain_ini_subsetting('puppet.conf/reports/puppetdb')
+            .with(
+              'ensure'                => 'absent',
+              'path'                  => '/etc/puppet/puppet.conf',
+              'section'               => 'master',
+              'setting'               => 'reports',
+              'subsetting'            => 'puppetdb',
+              'subsetting_separator'  => ',',
+            )
         }
       end
 
-      it { should contain_ini_subsetting('puppet.conf/reports/puppetdb').
-          with(
-          'ensure'                => 'present',
-          'path'                  => '/etc/puppet/puppet.conf',
-          'section'               => 'master',
-          'setting'               => 'reports',
-          'subsetting'            => 'puppetdb',
-          'subsetting_separator'  => ','
-      )}
+      describe 'when enabling reports' do
+        let(:params) do
+          {
+            'enable' => true,
+          }
+        end
+
+        it {
+          is_expected.to contain_ini_subsetting('puppet.conf/reports/puppetdb')
+            .with(
+              'ensure'                => 'present',
+              'path'                  => '/etc/puppet/puppet.conf',
+              'section'               => 'master',
+              'setting'               => 'reports',
+              'subsetting'            => 'puppetdb',
+              'subsetting_separator'  => ',',
+            )
+        }
+      end
     end
   end
 end

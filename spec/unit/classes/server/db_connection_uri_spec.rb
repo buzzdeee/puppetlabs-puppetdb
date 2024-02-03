@@ -1,117 +1,74 @@
 require 'spec_helper'
 
-describe 'puppetdb::server::database', :type => :class do
+describe 'puppetdb::server::database', type: :class do
   context 'on a supported platform' do
     let(:facts) do
       {
-        :osfamily                 => 'RedHat',
-        :operatingsystem          => 'RedHat',
-        :operatingsystemrelease   => '7.0',
-        :fqdn                     => 'test.domain.local',
+        os: {
+          family: 'RedHat',
+        },
+        operatingsystemrelease: '7.0',
+        networking: {
+          fqdn: 'test.domain.local',
+        },
+        service_provider: 'systemd',
       }
-    end
-
-    describe 'when setting database_ssl flag' do
-      let(:params) do
-        {
-           'database_ssl' => true,
-        }
-      end
-      it { should contain_ini_setting('puppetdb_subname').
-        with(
-             'section' => 'database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true'
-             )}
     end
 
     describe 'when passing jdbc subparams' do
       let(:params) do
         {
-           'jdbc_ssl_properties' => '?ssl=true',
+          jdbc_ssl_properties: '?ssl=true',
         }
       end
-      it { should contain_ini_setting('puppetdb_subname').
-        with(
-             'section' => 'database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true'
-             )}
-    end
 
-    describe 'when passing both database_ssl and jdbc subparams' do
-      let(:params) do
-        {
-           'database_ssl' => true,
-           'jdbc_ssl_properties' => '?ssl=true&sslmode=verify-full',
-        }
-      end
-      it { should contain_ini_setting('puppetdb_subname').
-        with(
-             'section' => 'database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true&sslmode=verify-full'
-             )}
-    end
-  end
-end
-
-describe 'puppetdb::server::read_database', :type => :class do
-  context 'on a supported platform' do
-    let(:facts) do
-      {
-        :osfamily                 => 'RedHat',
-        :operatingsystem          => 'RedHat',
-        :operatingsystemrelease   => '7.0',
-        :fqdn                     => 'test.domain.local',
+      it {
+        is_expected.to contain_ini_setting('puppetdb_subname')
+          .with(
+            section: 'database',
+            setting: 'subname',
+            value: '//localhost:5432/puppetdb?ssl=true',
+          )
       }
     end
 
-    describe 'when setting database_ssl flag' do
+    describe 'when using ssl communication' do
       let(:params) do
         {
-          # this sets read_database_host
-          'database_host' => 'localhost',
-          'database_ssl' => true,
+          postgresql_ssl_on: true,
+          ssl_key_pk8_path: '/tmp/private_key.pk8',
         }
       end
-      it { should contain_ini_setting('puppetdb_read_subname').
-        with(
-             'section' => 'read-database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true'
-             )}
-    end
 
-    describe 'when passing jdbc subparams' do
-      let(:params) do
-        {
-          'database_host' => 'localhost',
-          'jdbc_ssl_properties' => '?ssl=true',
-        }
+      it 'configures subname correctly' do
+        is_expected.to contain_ini_setting('puppetdb_subname')
+          .with(
+            ensure:  'present',
+            path: '/etc/puppetlabs/puppetdb/conf.d/database.ini',
+            section: 'database',
+            setting: 'subname',
+            value: '//localhost:5432/puppetdb?' \
+                   'ssl=true&sslfactory=org.postgresql.ssl.LibPQFactory&' \
+                   'sslmode=verify-full&' \
+                   'sslrootcert=/etc/puppetlabs/puppetdb/ssl/ca.pem&' \
+                   'sslkey=/tmp/private_key.pk8&' \
+                   'sslcert=/etc/puppetlabs/puppetdb/ssl/public.pem',
+          )
       end
-      it { should contain_ini_setting('puppetdb_read_subname').
-        with(
-             'section' => 'read-database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true'
-             )}
-    end
 
-    describe 'when passing both database_ssl and jdbc subparams' do
-      let(:params) do
-        {
-          'database_host' => 'localhost',
-          'database_ssl' => true,
-          'jdbc_ssl_properties' => '?ssl=true&sslmode=verify-full',
-        }
+      context 'when setting jdbc_ssl_properties as well' do
+        let(:params) do
+          {
+            jdbc_ssl_properties: '?ssl=true',
+            postgresql_ssl_on: true,
+          }
+        end
+
+        it 'raises an error' do
+          is_expected.to compile
+            .and_raise_error(%r{Variables 'postgresql_ssl_on' and 'jdbc_ssl_properties' can not be used at the same time!})
+        end
       end
-      it { should contain_ini_setting('puppetdb_read_subname').
-        with(
-             'section' => 'read-database',
-             'setting' => 'subname',
-             'value'   => '//localhost:5432/puppetdb?ssl=true&sslmode=verify-full'
-             )}
     end
   end
 end

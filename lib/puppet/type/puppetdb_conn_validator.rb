@@ -1,5 +1,4 @@
 Puppet::Type.newtype(:puppetdb_conn_validator) do
-
   @doc = "Verify that a connection can be successfully established between a node
           and the puppetdb server.  Its primary use is as a precondition to
           prevent configuration changes from being applied if the puppetdb
@@ -11,7 +10,7 @@ Puppet::Type.newtype(:puppetdb_conn_validator) do
     defaultto :present
   end
 
-  newparam(:name, :namevar => true) do
+  newparam(:name, namevar: true) do
     desc 'An arbitrary name used as the identity of the resource.'
   end
 
@@ -24,7 +23,7 @@ Puppet::Type.newtype(:puppetdb_conn_validator) do
   end
 
   newparam(:use_ssl) do
-    desc 'Whether the connection will be attemped using https'
+    desc 'Whether the connection will be attempted using https'
     defaultto true
   end
 
@@ -45,5 +44,4 @@ Puppet::Type.newtype(:puppetdb_conn_validator) do
       Integer(value)
     end
   end
-
 end

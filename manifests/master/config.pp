@@ -1,23 +1,25 @@
 # Manage puppet configuration. See README.md for more details.
 class puppetdb::master::config (
-  $puppetdb_server             = $::fqdn,
+  $puppetdb_server             = fact('networking.fqdn'),
   $puppetdb_port               = defined(Class['puppetdb']) ? {
-    true    => $::puppetdb::disable_ssl ? {
+    true    => $puppetdb::disable_ssl ? {
       true => 8080,
       default => 8081,
     },
     default => 8081,
   },
   $puppetdb_disable_ssl        = defined(Class['puppetdb']) ? {
-    true    => $::puppetdb::disable_ssl,
+    true    => $puppetdb::disable_ssl,
     default => false,
   },
   $masterless                  = $puppetdb::params::masterless,
   $puppetdb_soft_write_failure = false,
   $manage_routes               = true,
   $manage_storeconfigs         = true,
+  $enable_storeconfigs         = true,
   $manage_report_processor     = false,
   $manage_config               = true,
+  $create_puppet_service_resource = true,
   $strict_validation           = true,
   $enable_reports              = false,
   $puppet_confdir              = $puppetdb::params::puppet_confdir,
@@ -28,7 +30,6 @@ class puppetdb::master::config (
   $test_url                    = $puppetdb::params::test_url,
   $restart_puppet              = true,
 ) inherits puppetdb::params {
-
   # **WARNING**: Ugly hack to work around a yum bug with metadata parsing. This
   # should not be copied, replicated or even looked at. In short, never rename
   # your packages...
@@ -50,7 +51,7 @@ class puppetdb::master::config (
   # installed to revert the change.
   if !($puppetdb::params::puppetdb_version in ['present','absent'])
   and versioncmp($puppetdb::params::puppetdb_version, '3.0.0') >= 0
-  and $::osfamily in ['RedHat','Suse'] {
+  and $facts['os']['family'] in ['RedHat','Suse'] {
     exec { 'Remove puppetdb-terminus metadata for upgrade':
       command => 'rpm -e --justdb puppetdb-terminus',
       path    => '/sbin/:/bin/',
@@ -64,7 +65,6 @@ class puppetdb::master::config (
   }
 
   if ($strict_validation) {
-
     # Validate the puppetdb connection.  If we can't connect to puppetdb then we
     # *must* not perform the other configuration steps, or else
 
@@ -124,6 +124,7 @@ class puppetdb::master::config (
     class { 'puppetdb::master::storeconfigs':
       puppet_conf => $puppet_conf,
       masterless  => $masterless,
+      enable      => $enable_storeconfigs,
       require     => $storeconfigs_require,
     }
   }
@@ -165,10 +166,15 @@ class puppetdb::master::config (
 
   if ($restart_puppet) {
     # We will need to restart the puppet master service if certain config
-    # files are changed, so here we make sure it's in the catalog.
-    if ! defined(Service[$puppet_service_name]) {
+    # files are changed, so here we make sure it's in the catalog. This is
+    # parse-order dependent and could prevent another part of the code from
+    # declaring the service, so set $create_puppet_service_resource to false if you
+    # are absolutely sure you're declaring Service[$puppet_service_name] in
+    # some other way.
+    if $create_puppet_service_resource and ! defined(Service[$puppet_service_name]) {
       service { $puppet_service_name:
         ensure => running,
+        enable => true,
       }
     }
 
@@ -184,5 +190,4 @@ class puppetdb::master::config (
       Class['puppetdb::master::report_processor'] ~> Service[$puppet_service_name]
     }
   }
-
 }
