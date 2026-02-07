@@ -135,8 +135,8 @@ class puppetdb::params inherits puppetdb::globals {
         $vardir              = '/opt/puppetlabs/server/data/puppetdb'
       }
       'OpenBSD': {
-        $puppetdb_package    = 'openvoxdb'
-        $terminus_package    = 'openvoxdb-termini'
+        $puppetdb_package    = 'openvoxdb%8'
+        $terminus_package    = 'openvoxdb-termini%8'
         $etcdir              = '/etc/puppetlabs/puppetdb'
         $puppet_confdir      = pick($puppetdb::globals::puppet_confdir,'/etc/puppetlabs/puppet')
         $puppet_service_name = undef
